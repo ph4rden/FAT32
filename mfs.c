@@ -1,3 +1,7 @@
+/*
+Danny Le   - 1001794802 - Section:001
+Brian Phan - 1001795028 - Section:003
+*/
 // The MIT License (MIT)
 // 
 // Copyright (c) 2020 Trevor Bakker 
