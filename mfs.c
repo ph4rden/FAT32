@@ -33,6 +33,7 @@ Brian Phan - 1001795028 - Section:003
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <stdint.h>
 
 #define MAX_NUM_ARGUMENTS 3
 
@@ -43,6 +44,43 @@ Brian Phan - 1001795028 - Section:003
 
 #define MAX_COMMAND_SIZE 255    // The maximum command-line size
 
+/*
+commands:
+open 
+close 
+info 
+stat 
+cd 
+ls 
+get 
+read 
+del 
+undel 
+*/
+
+void open();
+void close();
+void info();
+void stat();
+void changeDirectory();
+void listFiles();
+void get();
+void read();
+void delete();
+void unDelete();
+
+//
+struct __attribute__((__packed__)) DirectoryEntry {
+  char DIR_Name[11];
+  uint8_t DIR_Attr;
+  uint8_t Unused1[8]; 
+  uint16_t DIR_FirstClusterHigh;
+  uint8_t Unused2[4];
+  uint16_t DIR_FirstClusterLow;
+  uint32_t DIR_FileSize;
+};
+
+struct DirectoryEntry dir[16];
 
 int main()
 {
