@@ -55,6 +55,7 @@ int main()
   if( strncmp( expanded_name, IMG_Name, 11 ) == 0 )
   {
     printf("They matched\n");
+    
   }
 
   return 0;

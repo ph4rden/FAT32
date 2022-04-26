@@ -36,7 +36,7 @@ Brian Phan - 1001795028 - Section:003
 #include <stdint.h>
 #include <ctype.h>
 
-#define MAX_NUM_ARGUMENTS 3
+#define MAX_NUM_ARGUMENTS 4
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
@@ -44,9 +44,6 @@ Brian Phan - 1001795028 - Section:003
                                 // will separate the tokens on our command line
 
 #define MAX_COMMAND_SIZE 255    // The maximum command-line size
-
-
-
 
 char    BS_OEMName[8];
 int16_t BPB_BytsPerSec;
@@ -95,8 +92,9 @@ int16_t NextLB( uint32_t sector )
 int compare(char* input, char* IMG_Name){
   char expanded_name[12];
   memset( expanded_name, ' ', 12 );
-
-  char *token = strtok( input, "." );
+  char temp_input[strlen(input)];
+  strncpy( temp_input, input, strlen( input ) );
+  char *token = strtok( temp_input, "." );
 
   strncpy( expanded_name, token, strlen( token ) );
 
@@ -119,7 +117,6 @@ int compare(char* input, char* IMG_Name){
   {
     return 1;
   }
-
   return 0;
 }
 
@@ -187,6 +184,7 @@ int main()
         printf("Error: File system image already open\n");
       }
       else{
+        //Read the FAT32 specs sheet to get offsets of info
         opened = 1;
         fseek(fp, 3, SEEK_SET);
         fread(&BS_OEMName, 8, 1, fp);
@@ -208,9 +206,9 @@ int main()
         fread(&BS_VolLab, 11, 1, fp);
         fseek(fp, (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec), SEEK_SET);
         fread(&dir[0], sizeof(struct DirectoryEntry), 16, fp);
-        for(int i = 0; i < 16; i++){
+        /*for(int i = 0; i < 16; i++){
           printf("\n%s", dir[i].DIR_Name);
-        }
+        }*/
       }
     }
     if(strcmp(token[0], "close") == 0)
@@ -222,6 +220,7 @@ int main()
 
     if(strcmp(token[0],"info") ==0 )
     {
+      //easy print all our info
       printf("\t\t\tHex:\tDecimal:\n");
       printf("BPB_BytesPerSec:\t%x\t%d\n", BPB_BytsPerSec, BPB_BytsPerSec);
       printf("BPB_SecPerClus:\t\t%x\t%d\n", BPB_SecPerClus, BPB_SecPerClus);
@@ -232,7 +231,20 @@ int main()
     
     if(strcmp(token[0],"stat") == 0)
     {
+      if(token[1] == NULL){
+        printf("\nNot enough arguments for stat");
+      }
+      else{
+        for(int i = 0; i < 16; i++){
+          if(compare(token[1], dir[i].DIR_Name)){
+            printf("\nAttributes: %d\nStarting cluster: %d", dir[i].DIR_Attr, dir[i].DIR_FirstClusterLow);
+            //0x2e means directory
+            if(dir[i].DIR_Name[0] == 0x2e){
 
+            }
+          }
+        }
+      }
     }
 
     if(strcmp(token[0], "get") == 0){
@@ -265,7 +277,6 @@ int main()
       if(!found){
         printf("Error: File not found");
       }
-
     }
 
     if(strcmp(token[0],"ls") == 0)
@@ -284,7 +295,7 @@ int main()
 
     if(strcmp(token[0],"cd") == 0)
     {
-      if(token[1] == "..")
+      if(strcmp(token[1], "..") == 0)
       {
 
       }
@@ -304,20 +315,36 @@ int main()
     
     if(strcmp(token[0],"read") == 0)
     {
-      
-      
+      if(token_count != 4){
+        printf("Not enough arguments for read");
+      }
+      else{
+        fseek(fp, (BPB_NumFATs * BPB_FATSz32 * BPB_BytsPerSec) + (BPB_RsvdSecCnt * BPB_BytsPerSec), SEEK_SET);
+        int num_bytes = atoi(token[3]);
+        for(int i = 0; i < 16; i++){
+          if(compare(token[1], dir[i].DIR_Name)){
+            fseek(fp, atoi(token[2]), SEEK_CUR);
+            uint8_t byte;
+            for(int i = 0; i < num_bytes; i++){
+              fread(&byte, sizeof(uint8_t), 1, fp);
+              printf("%d\n", byte);
+            }
+          }
+        }
+      }
     }
 
     if(strcmp(token[0],"del") == 0)
     {
+      //char IMG_NAME[11];
       if(token[1] == NULL){
         printf("\nNot enough arguments for del");
       }
       else{
         int found = 0;
         for(int i = 0; i < 16; i++){
+          //memcpy(IMG_NAME, dir[i].DIR_Name, 11);
           if(compare(token[1], dir[i].DIR_Name)){
-            strncpy(saved_filename, dir[i].DIR_Name, 11);
             dir[i].DIR_Name[0] = '?';
             dir[i].DIR_Attr = 0;
             found = 1;
@@ -335,16 +362,21 @@ int main()
         printf("\nNot enough arguments for undel");
       }
       else{
+        char letter = toupper(token[1][0]);
         for(int i = 0; i < 16; i++){
           if(dir[i].DIR_Name[0] == '?'){
-            strncpy(dir[i].DIR_Name, saved_filename, 11);
-            dir[i].DIR_Attr = 0x1;
+            token[1][0] = '?';
+            if(compare(token[1], dir[i].DIR_Name)){
+              dir[i].DIR_Name[0] = letter;
+              dir[i].DIR_Attr = 0x1;
+            }
           }
         }
       }
     }
     free( working_root );
   }
+
   if(fp != NULL)
   {
     fclose(fp);
